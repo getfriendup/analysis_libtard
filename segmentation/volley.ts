@@ -4,7 +4,7 @@
 
 import { Turn, Volley, Session } from '../types';
 import { parseDate, getGapSeconds } from '../utils/time';
-import { createHash } from 'crypto';
+import { sha256 } from 'js-sha256';
 
 /**
  * Create a unique ID for a volley based on its content
@@ -15,7 +15,7 @@ export function createVolleyId(
   participantIds: number[]
 ): string {
   const data = `${startTime.toISOString()}-${endTime.toISOString()}-${participantIds.sort().join(',')}`;
-  return createHash('sha256').update(data).digest('hex').substring(0, 16);
+  return sha256(data).substring(0, 16);
 }
 
 /**

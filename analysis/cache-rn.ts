@@ -1,22 +1,23 @@
 /**
- * LLM response caching using SHA256 hashes
+ * LLM response caching for React Native using AsyncStorage
  */
 
-import { promises as fs } from 'fs';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VolleyAnalysis, CacheEntry } from '../types';
-import * as path from 'path';
 import { sha256 } from 'js-sha256';
 
-/**
- * Cache manager for LLM responses
- */
-export class LLMCache {
-  private cache: Map<string, CacheEntry> = new Map();
-  private cachePath: string;
-  private dirty: boolean = false;
+const CACHE_KEY_PREFIX = '@analysis_cache:';
 
-  constructor(cachePath: string = './.cache/llm_cache.json') {
-    this.cachePath = cachePath;
+/**
+ * Cache manager for LLM responses (React Native version)
+ */
+export class LLMCacheRN {
+  private cache: Map<string, CacheEntry> = new Map();
+  private dirty: boolean = false;
+  private cacheKey: string;
+
+  constructor(cacheKey: string = 'llm_cache') {
+    this.cacheKey = `${CACHE_KEY_PREFIX}${cacheKey}`;
   }
 
   /**
@@ -27,45 +28,49 @@ export class LLMCache {
   }
 
   /**
-   * Load cache from disk
+   * Load cache from AsyncStorage
    */
   async load(): Promise<void> {
     try {
-      // Ensure directory exists
-      const dir = path.dirname(this.cachePath);
-      await fs.mkdir(dir, { recursive: true });
+      const data = await AsyncStorage.getItem(this.cacheKey);
 
-      const data = await fs.readFile(this.cachePath, 'utf-8');
-      const entries: Record<string, CacheEntry> = JSON.parse(data);
+      if (data) {
+        const entries: Record<string, CacheEntry> = JSON.parse(data);
 
-      this.cache.clear();
-      for (const [key, entry] of Object.entries(entries)) {
-        this.cache.set(key, entry);
+        this.cache.clear();
+        for (const [key, entry] of Object.entries(entries)) {
+          this.cache.set(key, entry);
+        }
+      } else {
+        // No cache exists yet
+        this.cache.clear();
       }
     } catch (error) {
-      // Cache file doesn't exist yet, start fresh
+      // Failed to load cache, start fresh
+      console.warn('[LLMCacheRN] Failed to load cache:', error);
       this.cache.clear();
     }
   }
 
   /**
-   * Save cache to disk
+   * Save cache to AsyncStorage
    */
   async save(): Promise<void> {
     if (!this.dirty) {
       return;
     }
 
-    const entries: Record<string, CacheEntry> = {};
-    for (const [key, entry] of this.cache.entries()) {
-      entries[key] = entry;
+    try {
+      const entries: Record<string, CacheEntry> = {};
+      for (const [key, entry] of this.cache.entries()) {
+        entries[key] = entry;
+      }
+
+      await AsyncStorage.setItem(this.cacheKey, JSON.stringify(entries));
+      this.dirty = false;
+    } catch (error) {
+      console.error('[LLMCacheRN] Failed to save cache:', error);
     }
-
-    const dir = path.dirname(this.cachePath);
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(this.cachePath, JSON.stringify(entries, null, 2));
-
-    this.dirty = false;
   }
 
   /**
@@ -145,4 +150,3 @@ export class LLMCache {
     this.dirty = true;
   }
 }
-
