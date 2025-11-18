@@ -4,7 +4,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Volley, VolleyAnalysis, Config } from '../types';
-import { LLMCache } from './cache';
+import { LLMCacheRN as LLMCache } from './cache-rn';
 import { formatVolleyForAnalysis } from './prompts';
 
 /**
