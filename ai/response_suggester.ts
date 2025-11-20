@@ -1,0 +1,203 @@
+/**
+ * Response Suggestion Engine
+ *
+ * Generates AI-powered response suggestions using role-swapping "gaslighting" technique
+ * to make Gemini clone your tone by thinking it's been replying as you all along.
+ */
+
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Message, ResponseBranch, UnreadMessage, ResponseSuggestionsResult } from '../statistical/types';
+import { buildResponseSuggestionPrompt } from './prompts';
+
+const SAFETY_SETTINGS = [
+  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+] as any;
+
+const GENERATION_CONFIG = {
+  temperature: 0.55,
+  maxOutputTokens: 2048,
+  responseMimeType: 'application/json',
+  responseSchema: {
+    type: 'object',
+    properties: {
+      branches: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            type: { type: 'string' },
+            rationale: { type: 'string' },
+            messages: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            tone_match_confidence: { type: 'number' }
+          },
+          required: ['type', 'rationale', 'messages', 'tone_match_confidence']
+        }
+      }
+    },
+    required: ['branches']
+  }
+};
+
+/**
+ * Extract unread messages (messages from contact that need reply)
+ */
+function extractUnreadMessages(
+  messages: Message[],
+  userId: number
+): UnreadMessage[] {
+  const sorted = [...messages].sort(
+    (a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+  );
+
+  // Find last message from user
+  let lastUserMessageIdx = -1;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    if (sorted[i].from_id === userId) {
+      lastUserMessageIdx = i;
+      break;
+    }
+  }
+
+  // Collect all messages from contact after user's last message
+  const unread: UnreadMessage[] = [];
+  const now = Date.now();
+
+  for (let i = lastUserMessageIdx + 1; i < sorted.length; i++) {
+    const msg = sorted[i];
+    if (msg.from_id !== userId && msg.content) {
+      const sentAt = new Date(msg.sent_at);
+      const hoursAgo = (now - sentAt.getTime()) / (1000 * 60 * 60);
+
+      unread.push({
+        text: msg.content,
+        from_me: false,
+        sent_at: msg.sent_at,
+        hours_ago: Math.round(hoursAgo * 10) / 10,
+      });
+    }
+  }
+
+  return unread;
+}
+
+/**
+ * Build style bank (recent messages from user)
+ */
+function buildStyleBank(
+  messages: Message[],
+  userId: number,
+  count: number = 20
+): string[] {
+  const userMessages = messages
+    .filter(msg => msg.from_id === userId && msg.content)
+    .slice(-count)
+    .map(msg => `System: ${msg.content}`);
+
+  return userMessages;
+}
+
+/**
+ * Build swapped history (recent conversation with roles swapped)
+ */
+function buildSwappedHistory(
+  messages: Message[],
+  userId: number,
+  limit: number = 10
+): string[] {
+  const recent = messages.slice(-limit);
+  const swapped: string[] = [];
+
+  for (const msg of recent) {
+    if (!msg.content) continue;
+
+    const role = msg.from_id === userId ? 'System' : 'User';
+    swapped.push(`${role}: ${msg.content}`);
+  }
+
+  return swapped;
+}
+
+/**
+ * Generate response suggestions
+ *
+ * @param messages - All messages in the chat
+ * @param userId - The current user's ID
+ * @param contactId - The contact's ID
+ * @param contactName - Name of the contact
+ * @param relationshipSummary - Brief summary of the relationship (from lore/analysis)
+ * @param apiKey - Gemini API key
+ * @returns Response suggestions with 3 different branches
+ */
+export async function generateResponseSuggestions(
+  messages: Message[],
+  userId: number,
+  contactId: number,
+  contactName: string,
+  relationshipSummary: string,
+  apiKey: string
+): Promise<ResponseSuggestionsResult> {
+  // Extract unread messages
+  const unreadMessages = extractUnreadMessages(messages, userId);
+
+  if (unreadMessages.length === 0) {
+    throw new Error('No unread messages found - nothing to respond to');
+  }
+
+  // Build context
+  const styleBank = buildStyleBank(messages, userId);
+  const swappedHistory = buildSwappedHistory(messages, userId);
+
+  // Build prompt
+  const prompt = buildResponseSuggestionPrompt({
+    contactName,
+    relationshipSummary,
+    unreadMessages: unreadMessages.map(m => m.text),
+    swappedHistory,
+    styleBank,
+    lastUnreadMessage: unreadMessages[unreadMessages.length - 1].text,
+  });
+
+  // Call Gemini
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: GENERATION_CONFIG as any,
+    safetySettings: SAFETY_SETTINGS,
+  });
+
+  const result = await model.generateContent(prompt);
+  const response = result.response;
+  let text = response.text();
+
+  // Remove markdown code blocks if present
+  text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+
+  // Parse response
+  let parsed: any;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    console.error('[response_suggester] Failed to parse response:', text.substring(0, 500));
+    throw new Error('Failed to parse AI response as JSON');
+  }
+
+  const branches: ResponseBranch[] = parsed.branches || [];
+
+  return {
+    contact_id: contactId,
+    contact_name: contactName,
+    branches: branches,
+    unread_messages: unreadMessages,
+    context_used: {
+      relationship_loaded: !!relationshipSummary,
+      swapped_history_count: swappedHistory.length,
+      style_bank_count: styleBank.length,
+    },
+  };
+}
