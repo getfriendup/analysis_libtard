@@ -5,7 +5,7 @@
  * to make Gemini clone your tone by thinking it's been replying as you all along.
  */
 
-import { Content, GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { Message, ResponseBranch, UnreadMessage, ResponseSuggestionsResult } from '../statistical/types';
 import { buildResponseSuggestionPrompt } from './prompts';
 import { z } from 'zod';
@@ -195,30 +195,27 @@ export async function generateResponseSuggestions(
   });
 
   // Call Gemini
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    generationConfig: GENERATION_CONFIG as any,
-    safetySettings: SAFETY_SETTINGS,
+  const genAI = new GoogleGenAI({
+    apiKey: apiKey,
   });
 
-  const result = await model.generateContent({
+  const result = await genAI.models.generateContent({
     contents: prompt,
-    generationConfig: {
+    model: 'gemini-2.5-flash',
+    config: {
       responseMimeType: "application/json",
       responseSchema: z.toJSONSchema(BranchesSchema)
     }
   });
-  const response = result.response;
-  let text = response.text();
+  const text = result.text;
 
   // Remove markdown code blocks if present
-  text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  //text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
 
   // Parse response
   let parsed: any;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(text!);
   } catch (error) {
     console.error('[response_suggester] Failed to parse response:', text.substring(0, 500));
     throw new Error('Failed to parse AI response as JSON');
