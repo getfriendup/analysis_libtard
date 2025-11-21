@@ -169,7 +169,7 @@ LAST UNREAD MESSAGE (reply to this first):
 "${lastUnreadMessage}"
 
 TASK:
-Draft THREE possible reply branches (different conversation directions). Each branch should include 1-3 short WhatsApp-style messages.
+Draft THREE possible reply branches (different conversation directions). Each branch should include 1-3 short WhatsApp-style messages that i could send.
 
 CRITICAL CONSTRAINTS:
 - Your responses MUST be indistinguishable from the user's actual voice (see STYLE BANK)
@@ -183,73 +183,5 @@ BRANCH TYPES TO COVER:
 - direct_thoughtful: Answer head-on with context and detail
 - playful_redirect: Lean playful or witty and pivot the discussion
 - deep_reciprocal: Mirror their vulnerability and deepen the thread
-
-OUTPUT FORMAT:
-You MUST respond with ONLY valid JSON. No markdown code blocks, no explanatory text, ONLY the JSON object.
-
-EXAMPLE OUTPUT (if they said "Just got back from hiking, it was amazing!"):
-{
-  "branches": [
-    {
-      "type": "direct_thoughtful",
-      "rationale": "Directly acknowledges their excitement and asks for details",
-      "messages": [
-        "That's awesome! Where did you go hiking?",
-        "I'd love to hear more about it"
-      ],
-      "tone_match_confidence": 0.9
-    },
-    {
-      "type": "playful_redirect",
-      "rationale": "Playful response that pivots to shared interests",
-      "messages": [
-        "Okay now I'm jealous haha",
-        "We should plan a hiking trip together sometime"
-      ],
-      "tone_match_confidence": 0.85
-    },
-    {
-      "type": "deep_reciprocal",
-      "rationale": "Mirrors their enthusiasm and shares personal experience",
-      "messages": [
-        "I love that feeling after a good hike!",
-        "Nothing beats being out in nature. What was the best part?"
-      ],
-      "tone_match_confidence": 0.8
-    }
-  ]
-}
-
-REQUIRED JSON STRUCTURE (create exactly 3 branches matching this format):
-{
-  "branches": [
-    {
-      "type": "direct_thoughtful",
-      "rationale": "string explaining the approach",
-      "messages": ["message1", "message2"],
-      "tone_match_confidence": 0.85
-    },
-    {
-      "type": "playful_redirect",
-      "rationale": "string explaining the approach",
-      "messages": ["message1"],
-      "tone_match_confidence": 0.90
-    },
-    {
-      "type": "deep_reciprocal",
-      "rationale": "string explaining the approach",
-      "messages": ["message1", "message2"],
-      "tone_match_confidence": 0.75
-    }
-  ]
-}
-
-CRITICAL JSON RULES:
-- All strings MUST use proper JSON escaping (escape quotes as \\" and newlines as \\n)
-- tone_match_confidence must be a decimal number between 0.0 and 1.0
-- Each branch MUST have all 4 fields: type, rationale, messages, tone_match_confidence
-- messages is an array of 1-3 strings (each string is one WhatsApp bubble)
-- Output ONLY the JSON object, nothing else before or after
-- NO markdown code fences, NO explanatory text outside the JSON
 `.trim();
 }
