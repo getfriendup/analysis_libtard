@@ -153,7 +153,7 @@ const BranchesSchema = z
     }
   );
 
-
+type Branch = z.infer<typeof BranchSchema>
 /**
  * Generate response suggestions
  *
@@ -224,7 +224,7 @@ export async function generateResponseSuggestions(
     throw new Error('Failed to parse AI response as JSON');
   }
 
-  const branches: ResponseBranch[] = parsed.branches || [];
+  const branches: Branch[] = parsed.branches || [];
 
   return {
     contact_id: contactId,
