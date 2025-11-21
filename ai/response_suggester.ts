@@ -216,7 +216,7 @@ export async function generateResponseSuggestions(
 
   const result = await genAI.models.generateContent({
     contents: prompt,
-    model: 'gemini-2.5-flash-lite',
+    model: 'gemini-2.5-flash',
     config: {
       responseMimeType: 'application/json',
       responseSchema: z.toJSONSchema(BranchesSchema),
