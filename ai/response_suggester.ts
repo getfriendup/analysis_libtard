@@ -5,17 +5,38 @@
  * to make Gemini clone your tone by thinking it's been replying as you all along.
  */
 
-import { GoogleGenAI } from '@google/genai';
-import { Message, ResponseBranch, UnreadMessage, ResponseSuggestionsResult } from '../statistical/types';
+import {
+  GoogleGenAI,
+  HarmBlockThreshold,
+  HarmCategory,
+  SafetySetting,
+} from '@google/genai';
+import {
+  Message,
+  ResponseSuggestionsResult,
+  UnreadMessage,
+} from '../statistical/types';
 import { buildResponseSuggestionPrompt } from './prompts';
 import { z } from 'zod';
 
-const SAFETY_SETTINGS = [
-  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-] as any;
+const SAFETY_SETTINGS: SafetySetting[] = [
+  {
+    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+    threshold: HarmBlockThreshold.BLOCK_NONE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    threshold: HarmBlockThreshold.BLOCK_NONE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    threshold: HarmBlockThreshold.BLOCK_NONE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_NONE,
+  },
+]; ;
 
 const GENERATION_CONFIG = {
   temperature: 0.55,
@@ -204,7 +225,8 @@ export async function generateResponseSuggestions(
     model: 'gemini-2.5-flash-lite',
     config: {
       responseMimeType: "application/json",
-      responseSchema: z.toJSONSchema(BranchesSchema)
+      responseSchema: z.toJSONSchema(BranchesSchema),
+      safetySettings: SAFETY_SETTINGS
     }
   });
   const text = result.text;
