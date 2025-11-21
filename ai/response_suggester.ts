@@ -19,10 +19,15 @@ import {
 import { buildResponseSuggestionPrompt } from './prompts';
 import { z } from 'zod';
 
-const SAFETY_SETTINGS: SafetySetting[] = Object.values(HarmCategory).map(v=>({
-  category: HarmCategory[v],
+const SAFETY_SETTINGS: SafetySetting[] = [
+  HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+  HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+  HarmCategory.HARM_CATEGORY_HARASSMENT,
+  HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+].map((v) => ({
+  category: v,
   threshold: HarmBlockThreshold.BLOCK_NONE,
-}))
+}));
 
 const GENERATION_CONFIG = {
   temperature: 0.55,
@@ -40,16 +45,16 @@ const GENERATION_CONFIG = {
             rationale: { type: 'string' },
             messages: {
               type: 'array',
-              items: { type: 'string' }
+              items: { type: 'string' },
             },
-            tone_match_confidence: { type: 'number' }
+            tone_match_confidence: { type: 'number' },
           },
-          required: ['type', 'rationale', 'messages', 'tone_match_confidence']
-        }
-      }
+          required: ['type', 'rationale', 'messages', 'tone_match_confidence'],
+        },
+      },
     },
-    required: ['branches']
-  }
+    required: ['branches'],
+  },
 };
 
 /**
@@ -103,9 +108,9 @@ function buildStyleBank(
   count: number = 20
 ): string[] {
   const userMessages = messages
-    .filter(msg => msg.from_id === userId && msg.content)
+    .filter((msg) => msg.from_id === userId && msg.content)
     .slice(-count)
-    .map(msg => `System: ${msg.content}`);
+    .map((msg) => `System: ${msg.content}`);
 
   return userMessages;
 }
@@ -131,8 +136,11 @@ function buildSwappedHistory(
   return swapped;
 }
 
-
-const BranchTypes = ["direct_thoughtful", "playful_redirect", "deep_reciprocal"] as const;
+const BranchTypes = [
+  'direct_thoughtful',
+  'playful_redirect',
+  'deep_reciprocal',
+] as const;
 
 const BranchSchema = z.object({
   type: z.enum(BranchTypes),
@@ -155,12 +163,12 @@ const BranchesSchema = z
       );
     },
     {
-      message: `Must have exactly one of each branch type: ${BranchTypes.join(", ")}`,
-      path: ["branches"],
+      message: `Must have exactly one of each branch type: ${BranchTypes.join(', ')}`,
+      path: ['branches'],
     }
   );
 
-type Branch = z.infer<typeof BranchSchema>
+type Branch = z.infer<typeof BranchSchema>;
 /**
  * Generate response suggestions
  *
@@ -195,7 +203,7 @@ export async function generateResponseSuggestions(
   const prompt = buildResponseSuggestionPrompt({
     contactName,
     relationshipSummary,
-    unreadMessages: unreadMessages.map(m => m.text),
+    unreadMessages: unreadMessages.map((m) => m.text),
     swappedHistory,
     styleBank,
     lastUnreadMessage: unreadMessages[unreadMessages.length - 1].text,
@@ -210,10 +218,10 @@ export async function generateResponseSuggestions(
     contents: prompt,
     model: 'gemini-2.5-flash-lite',
     config: {
-      responseMimeType: "application/json",
+      responseMimeType: 'application/json',
       responseSchema: z.toJSONSchema(BranchesSchema),
-      safetySettings: SAFETY_SETTINGS
-    }
+      safetySettings: SAFETY_SETTINGS,
+    },
   });
   const text = result.text;
 
@@ -225,7 +233,10 @@ export async function generateResponseSuggestions(
   try {
     parsed = JSON.parse(text!);
   } catch (error) {
-    console.error('[response_suggester] Failed to parse response:', text.substring(0, 500));
+    console.error(
+      '[response_suggester] Failed to parse response:',
+      text.substring(0, 500)
+    );
     throw new Error('Failed to parse AI response as JSON');
   }
 
