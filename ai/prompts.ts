@@ -169,7 +169,7 @@ LAST UNREAD MESSAGE (reply to this first):
 "${lastUnreadMessage}"
 
 TASK:
-Draft THREE possible reply branches (different conversation directions). Each branch should include 1-3 short WhatsApp-style messages that i could send.
+Draft THREE possible reply branches (different conversation directions). Each branch should include 1-3 messages that i could send.
 
 CRITICAL CONSTRAINTS:
 - Your responses MUST be indistinguishable from the user's actual voice (see STYLE BANK)
