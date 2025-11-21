@@ -5,9 +5,10 @@
  * to make Gemini clone your tone by thinking it's been replying as you all along.
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Content, GoogleGenerativeAI } from '@google/generative-ai';
 import { Message, ResponseBranch, UnreadMessage, ResponseSuggestionsResult } from '../statistical/types';
 import { buildResponseSuggestionPrompt } from './prompts';
+import { z } from 'zod';
 
 const SAFETY_SETTINGS = [
   { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -123,6 +124,36 @@ function buildSwappedHistory(
   return swapped;
 }
 
+
+const BranchTypes = ["direct_thoughtful", "playful_redirect", "deep_reciprocal"] as const;
+
+const BranchSchema = z.object({
+  type: z.enum(BranchTypes),
+  rationale: z.string(),
+  messages: z.array(z.string()),
+  tone_match_confidence: z.number().min(0).max(1),
+});
+
+const BranchesSchema = z
+  .object({
+    branches: z.array(BranchSchema),
+  })
+  .refine(
+    (data) => {
+      const types = data.branches.map((b) => b.type);
+      const uniqueTypes = new Set(types);
+      return (
+        uniqueTypes.size === BranchTypes.length &&
+        BranchTypes.every((t) => uniqueTypes.has(t))
+      );
+    },
+    {
+      message: `Must have exactly one of each branch type: ${BranchTypes.join(", ")}`,
+      path: ["branches"],
+    }
+  );
+
+
 /**
  * Generate response suggestions
  *
@@ -171,7 +202,13 @@ export async function generateResponseSuggestions(
     safetySettings: SAFETY_SETTINGS,
   });
 
-  const result = await model.generateContent(prompt);
+  const result = await model.generateContent({
+    contents: prompt,
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: z.toJSONSchema(BranchesSchema)
+    }
+  });
   const response = result.response;
   let text = response.text();
 
