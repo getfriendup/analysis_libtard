@@ -88,12 +88,18 @@ const RELATIONSHIP_ANALYSIS_SCHEMA = {
         extra_points: {
           type: "array",
           items: { type: "string" }
+        },
+        summary: {
+          type: "array",
+          items: { type: "string" },
+          minItems: 1
         }
       },
       required: [
         "relationship_strength_score",
         "relationship_type",
-        "score_justification"
+        "score_justification",
+        "summary"
       ]
     }
   },

@@ -6,8 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VolleyAnalysis } from '../statistical/types';
 import { sha256 } from 'js-sha256';
 
-interface CacheEntry {
-  response: VolleyAnalysis;
+interface CacheEntry<T> {
+  response: T;
   timestamp: number;
   model: string;
   hash: string;
@@ -18,8 +18,8 @@ const CACHE_KEY_PREFIX = '@analysis_cache:';
 /**
  * Cache manager for LLM responses (React Native version)
  */
-export class LLMCacheRN {
-  private cache: Map<string, CacheEntry> = new Map();
+export class LLMCacheRN<T = VolleyAnalysis> {
+  private cache: Map<string, CacheEntry<T>> = new Map();
   private dirty: boolean = false;
   private cacheKey: string;
 
@@ -42,7 +42,7 @@ export class LLMCacheRN {
       const data = await AsyncStorage.getItem(this.cacheKey);
 
       if (data) {
-        const entries: Record<string, CacheEntry> = JSON.parse(data);
+        const entries: Record<string, CacheEntry<T>> = JSON.parse(data);
 
         this.cache.clear();
         for (const [key, entry] of Object.entries(entries)) {
@@ -68,7 +68,7 @@ export class LLMCacheRN {
     }
 
     try {
-      const entries: Record<string, CacheEntry> = {};
+      const entries: Record<string, CacheEntry<T>> = {};
       for (const [key, entry] of this.cache.entries()) {
         entries[key] = entry;
       }
@@ -83,8 +83,8 @@ export class LLMCacheRN {
   /**
    * Get cached analysis
    */
-  get(volleyText: string): VolleyAnalysis | null {
-    const key = this.generateKey(volleyText);
+  get(prompt: string): T | null {
+    const key = this.generateKey(prompt);
     const entry = this.cache.get(key);
 
     if (entry) {
@@ -97,13 +97,9 @@ export class LLMCacheRN {
   /**
    * Store analysis in cache
    */
-  set(
-    volleyText: string,
-    analysis: VolleyAnalysis,
-    model: string = 'gemini-2.5-flash'
-  ): void {
-    const key = this.generateKey(volleyText);
-    const entry: CacheEntry = {
+  set(prompt: string, analysis: T, model: string = 'gemini-2.5-flash'): void {
+    const key = this.generateKey(prompt);
+    const entry: CacheEntry<T> = {
       response: analysis,
       timestamp: Date.now(),
       model,

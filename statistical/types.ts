@@ -188,6 +188,29 @@ export interface ReciprocityStats {
   avg_turn_length_them: number;
 }
 
+export interface ChurnMetrics {
+  recency_days: number;
+  recent_window_days: number;
+  recent_volley_count: number;
+  historical_volley_count: number;
+  historical_volley_rate: number;
+  recent_volley_rate: number;
+  frequency_ratio: number;
+  historical_avg_turns: number;
+  recent_avg_turns: number;
+  value_ratio: number;
+  churn_risk_score: number;
+  total_days_of_history: number;
+}
+
+export interface ResponsivenessScore {
+  contact_id: number;
+  score: number; // 0-1
+  mean_response_ms: number;
+  z_score: number;
+  sample_count: number;
+}
+
 // ===================================================================
 // AI/LLM TYPES
 // ===================================================================
@@ -254,6 +277,7 @@ export interface RelationshipAnalysis {
   relationship_strength_score: number; // 0-5
   relationship_type: string; // e.g., "work buddies", "close friends", etc.
   score_justification: string;
+  summary: string[]; // relationship lore: roles, shared threads, recurring topics
   recent_examples?: RecentExample[];
   improvement_shift_status?: string; // e.g., "improving", "stable", "declining"
   interaction_type?: string; // e.g., "supportive", "casual", "professional"

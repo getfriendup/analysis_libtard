@@ -50,3 +50,9 @@ export { calculateHealthScore } from './health/scoring';
 // ===================================================================
 
 export * from './gamification';
+
+// ===================================================================
+// IMPORTANCE EXPORTS - Relationship prioritization
+// ===================================================================
+
+export * from './importance';

@@ -131,7 +131,9 @@ What facets of my life do I share with this person? (Friends / work / erasmus / 
 
 Fun moments (highlight fun moments or stories shared here, can be up to 10, just note the date for future reference)
 
-Also add 'extra points' or notes of notable things.`;
+Also add 'extra points' or notes of notable things.
+
+Finally, create a "summary" field that lists 3-6 concise bullet-style notes you'd jot down for yourself about this relationship. Think of this as the lore/backstory a writer would keep handy: who this person is to the user (friend, sibling, coworker, etc.), what threads or rituals define their connection, and any enduring topics or shifts worth remembering. Keep every note under ~15 words, use plain non-fluffy language, and mention concrete anchors (shared contexts, recurring topics, roles). If something is unknown, say so directly (e.g., "Role unclear; chats stay purely logistical.").`;
 
 /**
  * Response suggester prompt template
