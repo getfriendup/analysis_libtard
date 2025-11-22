@@ -29,33 +29,6 @@ const SAFETY_SETTINGS: SafetySetting[] = [
   threshold: HarmBlockThreshold.BLOCK_NONE,
 }));
 
-const GENERATION_CONFIG = {
-  temperature: 0.55,
-  maxOutputTokens: 2048,
-  responseMimeType: 'application/json',
-  responseSchema: {
-    type: 'object',
-    properties: {
-      branches: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            type: { type: 'string' },
-            rationale: { type: 'string' },
-            messages: {
-              type: 'array',
-              items: { type: 'string' },
-            },
-            tone_match_confidence: { type: 'number' },
-          },
-          required: ['type', 'rationale', 'messages', 'tone_match_confidence'],
-        },
-      },
-    },
-    required: ['branches'],
-  },
-};
 
 /**
  * Extract unread messages (messages from contact that need reply)
@@ -149,24 +122,25 @@ const BranchSchema = z.object({
   tone_match_confidence: z.number().min(0).max(1),
 });
 
-const BranchesSchema = z
-  .object({
-    branches: z.array(BranchSchema),
-  })
-  .refine(
-    (data) => {
-      const types = data.branches.map((b) => b.type);
-      const uniqueTypes = new Set(types);
-      return (
-        uniqueTypes.size === BranchTypes.length &&
-        BranchTypes.every((t) => uniqueTypes.has(t))
-      );
-    },
-    {
-      message: `Must have exactly one of each branch type: ${BranchTypes.join(', ')}`,
-      path: ['branches'],
-    }
-  );
+// Note: BranchesSchema validation removed - using JSON Schema directly in API call
+// const BranchesSchema = z
+//   .object({
+//     branches: z.array(BranchSchema),
+//   })
+//   .refine(
+//     (data) => {
+//       const types = data.branches.map((b) => b.type);
+//       const uniqueTypes = new Set(types);
+//       return (
+//         uniqueTypes.size === BranchTypes.length &&
+//         BranchTypes.every((t) => uniqueTypes.has(t))
+//       );
+//     },
+//     {
+//       message: `Must have exactly one of each branch type: ${BranchTypes.join(', ')}`,
+//       path: ['branches'],
+//     }
+//   );
 
 type Branch = z.infer<typeof BranchSchema>;
 /**
@@ -219,7 +193,25 @@ export async function generateResponseSuggestions(
     model: 'gemini-2.5-flash',
     config: {
       responseMimeType: 'application/json',
-      responseSchema: z.toJSONSchema(BranchesSchema),
+      responseSchema: {
+        type: 'object',
+        properties: {
+          branches: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                type: { type: 'string', enum: ['direct_thoughtful', 'playful_redirect', 'deep_reciprocal'] },
+                rationale: { type: 'string' },
+                messages: { type: 'array', items: { type: 'string' } },
+                tone_match_confidence: { type: 'number', minimum: 0, maximum: 1 }
+              },
+              required: ['type', 'rationale', 'messages', 'tone_match_confidence']
+            }
+          }
+        },
+        required: ['branches']
+      },
       safetySettings: SAFETY_SETTINGS,
     },
   });
@@ -229,9 +221,13 @@ export async function generateResponseSuggestions(
   //text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
 
   // Parse response
+  if (!text) {
+    throw new Error('Empty response from AI');
+  }
+
   let parsed: any;
   try {
-    parsed = JSON.parse(text!);
+    parsed = JSON.parse(text);
   } catch (error) {
     console.error(
       '[response_suggester] Failed to parse response:',

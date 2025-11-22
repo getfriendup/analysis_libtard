@@ -44,3 +44,9 @@ export { generateResponseSuggestions } from './ai/response_suggester';
 // ===================================================================
 
 export { calculateHealthScore } from './health/scoring';
+
+// ===================================================================
+// GAMIFICATION EXPORTS - Quest system & scoring
+// ===================================================================
+
+export * from './gamification';
