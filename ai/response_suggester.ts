@@ -96,7 +96,7 @@ function buildSwappedHistory(
   userId: number,
   limit: number = 10
 ): string[] {
-  const recent = messages.slice(-limit);
+  const recent = messages.slice(0, limit);
   const swapped: string[] = [];
 
   for (const msg of recent) {
