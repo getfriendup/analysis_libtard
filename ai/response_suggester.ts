@@ -190,7 +190,7 @@ export async function generateResponseSuggestions(
 
   const result = await genAI.models.generateContent({
     contents: prompt,
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5',
     config: {
       responseMimeType: 'application/json',
       responseSchema: {
