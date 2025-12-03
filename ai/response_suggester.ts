@@ -183,6 +183,8 @@ export async function generateResponseSuggestions(
     lastUnreadMessage: unreadMessages[unreadMessages.length - 1].text,
   });
 
+  console.log(prompt)
+
   // Call Gemini
   const genAI = new GoogleGenAI({
     apiKey: apiKey,
@@ -190,7 +192,7 @@ export async function generateResponseSuggestions(
 
   const result = await genAI.models.generateContent({
     contents: prompt,
-    model: 'gemini-2.5',
+    model: 'gemini-2.5-pro',
     config: {
       responseMimeType: 'application/json',
       responseSchema: {
