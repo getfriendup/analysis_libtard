@@ -78,11 +78,11 @@ function extractUnreadMessages(
 function buildStyleBank(
   messages: Message[],
   userId: number,
-  count: number = 20
+  count: number = 200
 ): string[] {
   const userMessages = messages
     .filter((msg) => msg.from_id === userId && msg.content)
-    .slice(-count)
+    .slice(0, count)
     .map((msg) => `System: ${msg.content}`);
 
   return userMessages;
@@ -94,7 +94,7 @@ function buildStyleBank(
 function buildSwappedHistory(
   messages: Message[],
   userId: number,
-  limit: number = 10
+  limit: number = 100
 ): string[] {
   const recent = messages.slice(0, limit);
   const swapped: string[] = [];
