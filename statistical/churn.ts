@@ -32,6 +32,7 @@ const DEFAULT_METRICS: ChurnMetrics = {
   value_ratio: 1,
   churn_risk_score: 0,
   total_days_of_history: 0,
+  historical_avg_gap_days: 0,
 };
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
@@ -144,6 +145,7 @@ export function calculateChurnMetrics(
     value_ratio: valueRatio,
     churn_risk_score: churnRiskScore,
     total_days_of_history: totalDaysOfHistory,
+    historical_avg_gap_days: historicalAvgGapDays,
   };
 }
 

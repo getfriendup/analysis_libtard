@@ -201,6 +201,7 @@ export interface ChurnMetrics {
   value_ratio: number;
   churn_risk_score: number;
   total_days_of_history: number;
+  historical_avg_gap_days: number; // Average gap between volleys in days
 }
 
 export interface ResponsivenessScore {

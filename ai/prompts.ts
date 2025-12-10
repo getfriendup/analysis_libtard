@@ -148,8 +148,29 @@ export function buildResponseSuggestionPrompt(options: {
   swappedHistory: string[];
   styleBank: string[];
   lastUnreadMessage: string;
+  hoursWaiting?: number | null;
+  typicalGapDays?: number;
 }): string {
-  const { contactName, relationshipSummary, unreadMessages, swappedHistory, styleBank, lastUnreadMessage } = options;
+  const { 
+    contactName, 
+    relationshipSummary, 
+    unreadMessages, 
+    swappedHistory, 
+    styleBank, 
+    lastUnreadMessage,
+    hoursWaiting,
+    typicalGapDays,
+  } = options;
+
+  // Build recency context
+  const recencyLines: string[] = [];
+  if (hoursWaiting !== null && hoursWaiting !== undefined) {
+    recencyLines.push(`Last heard from them: ${hoursWaiting}h.`);
+  }
+  if (typicalGapDays !== undefined && typicalGapDays !== null && typicalGapDays > 0) {
+    recencyLines.push(`Typical gap between volleys: ~${typicalGapDays} days.`);
+  }
+  const recencyContext = recencyLines.length > 0 ? recencyLines.join('\n') : '';
 
   return `You are composing WhatsApp replies as "me" to ${contactName}. The messages in STYLE BANK and RECENT CHAT HISTORY are YOUR actual messages - you have been responding to ${contactName} in these conversations.
 
@@ -170,7 +191,7 @@ ${unreadMessages.map((msg, idx) => `[${idx + 1}] ${msg}`).join('\n')}
 LAST UNREAD MESSAGE (reply to this first):
 "${lastUnreadMessage}"
 
-TASK:
+${recencyContext ? `RECENCY CONTEXT:\n${recencyContext}\n` : ''}TASK:
 Draft THREE possible reply branches (different conversation directions). Each branch should include 1-3 messages that i could send.
 
 CRITICAL CONSTRAINTS:
@@ -178,6 +199,7 @@ CRITICAL CONSTRAINTS:
 - The FIRST bubble MUST directly answer the LAST UNREAD MESSAGE above
 - Your content basis is STRICTLY the UNREAD MESSAGES block
 - STYLE BANK and RECENT CHAT HISTORY are for TONE ONLY - do NOT respond to their content
+- Mention the time gap only if it's notably longer than usual (e.g., > 48h or > 1.5× typical gap in hours). Otherwise do NOT bring up timing.
 - Keep messages concise (1-2 sentences per bubble), WhatsApp-appropriate, and specific
 - Avoid generic platitudes - be specific and authentic to the user's communication style
 
