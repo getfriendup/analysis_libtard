@@ -152,6 +152,7 @@ type Branch = z.infer<typeof BranchSchema>;
  * @param contactName - Name of the contact
  * @param relationshipSummary - Brief summary of the relationship (from lore/analysis)
  * @param apiKey - Gemini API key
+ * @param typicalGapDays - Optional typical gap between volleys in days (from ChurnMetrics.HistoricalAvgGapDays)
  * @returns Response suggestions with 3 different branches
  */
 export async function generateResponseSuggestions(
@@ -160,20 +161,34 @@ export async function generateResponseSuggestions(
   contactId: number,
   contactName: string,
   relationshipSummary: string,
-  apiKey: string
+  apiKey: string,
+  typicalGapDays?: number
 ): Promise<ResponseSuggestionsResult> {
+  const overallStart = Date.now();
+  console.log('[response_suggester] Starting generation...');
+
   // Extract unread messages
+  const extractStart = Date.now();
   const unreadMessages = extractUnreadMessages(messages, userId);
+  const extractTime = Date.now() - extractStart;
+  console.log(`[response_suggester] Extract unread messages: ${extractTime}ms (found ${unreadMessages.length})`);
 
   if (unreadMessages.length === 0) {
     throw new Error('No unread messages found - nothing to respond to');
   }
 
   // Build context
+  const contextStart = Date.now();
   const styleBank = buildStyleBank(messages, userId);
   const swappedHistory = buildSwappedHistory(messages, userId);
 
+  // Extract time context (use most recent unread message)
+  const hoursWaiting = unreadMessages[unreadMessages.length - 1]?.hours_ago ?? null;
+  const contextTime = Date.now() - contextStart;
+  console.log(`[response_suggester] Build context: ${contextTime}ms (styleBank: ${styleBank.length}, history: ${swappedHistory.length})`);
+
   // Build prompt
+  const promptStart = Date.now();
   const prompt = buildResponseSuggestionPrompt({
     contactName,
     relationshipSummary,
@@ -181,9 +196,14 @@ export async function generateResponseSuggestions(
     swappedHistory,
     styleBank,
     lastUnreadMessage: unreadMessages[unreadMessages.length - 1].text,
+    hoursWaiting,
+    typicalGapDays,
   });
+  const promptTime = Date.now() - promptStart;
+  console.log(`[response_suggester] Build prompt: ${promptTime}ms (length: ${prompt.length} chars)`);
 
   // Call Gemini
+  const geminiStart = Date.now();
   const genAI = new GoogleGenAI({
     apiKey: apiKey,
   });
@@ -215,12 +235,16 @@ export async function generateResponseSuggestions(
       safetySettings: SAFETY_SETTINGS,
     },
   });
+  const geminiTime = Date.now() - geminiStart;
+  console.log(`[response_suggester] Gemini API call: ${geminiTime}ms`);
+  
   const text = result.text;
 
   // Remove markdown code blocks if present
   //text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
 
   // Parse response
+  const parseStart = Date.now();
   if (!text) {
     throw new Error('Empty response from AI');
   }
@@ -237,6 +261,11 @@ export async function generateResponseSuggestions(
   }
 
   const branches: Branch[] = parsed.branches || [];
+  const parseTime = Date.now() - parseStart;
+  console.log(`[response_suggester] Parse response: ${parseTime}ms (branches: ${branches.length})`);
+
+  const overallTime = Date.now() - overallStart;
+  console.log(`[response_suggester] Total generation time: ${overallTime}ms`);
 
   return {
     contact_id: contactId,
